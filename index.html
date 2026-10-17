@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MD RAZIKUL ISLAM JONI | Interactive 3D Holographic Resume</title>
+        <meta name="description" content="MD Razikul Islam Joni - Jr. Full-Stack Developer | Interactive 3D Holographic Resume built with Three.js, WebGL & Tailwind CSS.">
+    <meta name="author" content="MD Razikul Islam Joni">
+    <meta property="og:title" content="MD RAZIKUL ISLAM JONI | Interactive 3D Holographic Resume">
+    <meta property="og:description" content="Explore MD Razikul Islam Joni's interactive 3D cyberpunk holographic resume featuring real-time WebGL particles, project specs, and AI terminal.">
+    <meta property="og:type" content="website">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-blue: #0066ff;
+            --panel-bg: rgba(6, 16, 36, 0.72);
+            --panel-border: rgba(0, 243, 255, 0.45);
+        }
+
+        * {
+            box-sizing: border-box;
+            scrollbar-width: thin;
+            scrollbar-color: var(--neon-cyan) rgba(4, 12, 28, 0.8);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #020712;
+            color: #e2f1ff;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+            perspective: 1400px;
+        }
+
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .font-mono-code {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* 3D WebGL Background Canvas */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: auto;
+        }
+
+        /* Holographic Glass Card Styling */
+        .holo-card {
+            background: var(--panel-bg);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--panel-border);
+            box-shadow: 0 0 22px rgba(0, 243, 255, 0.14), inset 0 0 18px rgba(0, 243, 255, 0.07);
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .holo-card:hover {
+            border-color: rgba(0, 243, 255, 0.9);
+            box-shadow: 0 0 32px rgba(0, 243, 255, 0.32), inset 0 0 24px rgba(0, 243, 255, 0.14);
+        }
+
+        /* Corner HUD Brackets */
+        .holo-card::before,
+        .holo-card::after {
+            content: '';
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            border-color: var(--neon-cyan);
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .holo-card::before {
+            top: -1px;
+            left: -1px;
+            border-top: 2px solid var(--neon-cyan);
+            border-left: 2px solid var(--neon-cyan);
+        }
+
+        .holo-card::after {
+            bottom: -1px;
+            right: -1px;
+            border-bottom: 2px solid var(--neon-cyan);
+            border-right: 2px solid var(--neon-cyan);
+        }
+
+        /* Left Wing & Right Wing 3D Perspective Angles on Desktop */
+        @media (min-width: 1280px) {
+            .wing-left {
+                transform: rotateY(14deg) translateZ(10px);
+                transform-origin: left center;
+            }
+            .wing-left:hover {
+                transform: rotateY(4deg) translateZ(28px) scale(1.015);
+            }
+            .wing-right {
+                transform: rotateY(-14deg) translateZ(10px);
+                transform-origin: right center;
+            }
+            .wing-right:hover {
+                transform: rotateY(-4deg) translateZ(28px) scale(1.015);
+            }
+            .center-pedestal {
+                transform: translateZ(35px);
+            }
+        }
+
+        /* Hologram Scanline Overlay */
+        .scanline-overlay {
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0, 243, 255, 0.06) 50%,
+                rgba(0, 243, 255, 0.06)
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+
+        /* Laser Scanner Beam Animation */
+        @keyframes laserScan {
+            0% { top: 0%; opacity: 0.2; }
+            50% { top: 96%; opacity: 0.85; }
+            100% { top: 0%; opacity: 0.2; }
+        }
+
+        .laser-beam {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00f3ff, #ffffff, #00f3ff, transparent);
+            box-shadow: 0 0 12px #00f3ff, 0 0 24px #00f3ff;
+            animation: laserScan 5s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        /* Glowing Text */
+        .glow-text {
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.65), 0 0 22px rgba(0, 102, 255, 0.45);
+        }
+
+        /* Section Header Bar */
+        .section-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.25);
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .section-bar::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 18px;
+            background: var(--neon-cyan);
+            box-shadow: 0 0 8px var(--neon-cyan);
+            border-radius: 2px;
+        }
+
+        /* Interactive Skill Pill */
+        .skill-badge {
+            background: rgba(0, 243, 255, 0.08);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            transition: all 0.2s ease;
+        }
+        .skill-badge:hover {
+            background: rgba(0, 243, 255, 0.22);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 12px rgba(0, 243, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        /* Holographic Base Emitter Cone */
+        .holo-projector-glow {
+            background: radial-gradient(ellipse at center, rgba(0, 243, 255, 0.42) 0%, rgba(0, 102, 255, 0.12) 50%, transparent 75%);
+            filter: blur(10px);
+        }
+
+        /* Custom Button Glow */
+        .cyber-btn {
+            background: linear-gradient(135deg, rgba(0, 243, 255, 0.16), rgba(0, 102, 255, 0.22));
+            border: 1px solid rgba(0, 243, 255, 0.55);
+            transition: all 0.22s ease;
+        }
+        .cyber-btn:hover {
+            background: linear-gradient(135deg, rgba(0, 243, 255, 0.35), rgba(0, 102, 255, 0.45));
+            box-shadow: 0 0 16px rgba(0, 243, 255, 0.55);
+            transform: translateY(-1px);
+        }
+    
+        @media print {
+            body { background: #030712 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            #bg-canvas, .scanline-overlay, header .cyber-btn, #portrait-upload, #toast { display: none !important; }
+            .holo-card { break-inside: avoid; border: 1px solid #00f3ff !important; box-shadow: none !important; }
+        }
+    </style>
+</head>
+<body class="selection:bg-cyan-500 selection:text-slate-950">
+
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Scanline subtle overlay -->
+    <div class="fixed inset-0 scanline-overlay z-10 pointer-events-none"></div>
+
+    <header class="relative z-20 max-w-[1600px] mx-auto px-4 pt-3 pb-2 flex flex-wrap items-center justify-between gap-3 border-b border-cyan-500/20">
+        <div class="flex items-center gap-3">
+            <div class="w-3 h-3 rounded-full bg-cyan-400 animate-ping"></div>
+            <span class="font-orbitron text-xs sm:text-sm tracking-widest text-cyan-300 uppercase">
+                HOLO-OS // BIO-ID: <strong class="text-white">@RAZIKULJONI</strong>
+            </span>
+            <span class="hidden md:inline-block text-[11px] font-mono-code px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-400/30 text-cyan-300">
+                DHAKA, BD • 23.8103° N, 90.4125° E
+            </span>
+        </div>
+
+        <!-- Mode & Camera Controls -->
+        <div class="flex flex-wrap items-center gap-2">
+            <button onclick="setCameraPreset('overview')" class="cyber-btn px-3 py-1 rounded text-xs font-mono-code text-cyan-200 flex items-center gap-1.5">
+                <i class="fa-solid fa-cube text-cyan-400"></i> 3D HUD View
+            </button>
+            <button onclick="toggleFlatMode()" id="btn-flat-mode" class="cyber-btn px-3 py-1 rounded text-xs font-mono-code text-cyan-200 flex items-center gap-1.5">
+                <i class="fa-solid fa-table-columns text-cyan-400"></i> Toggle Flat/3D Tilt
+            </button>
+            <button onclick="window.print()" class="cyber-btn px-3 py-1 rounded text-xs font-mono-code text-cyan-200 flex items-center gap-1.5" title="Print or Save as PDF">
+                <i class="fa-solid fa-print text-cyan-400"></i> Print / PDF
+            </button>
+            <button onclick="openTerminalModal()" class="cyber-btn px-3 py-1 rounded text-xs font-mono-code text-cyan-200 flex items-center gap-1.5">
+                <i class="fa-solid fa-terminal text-emerald-400"></i> Ask AI Terminal
+            </button>
+            <label for="portrait-upload" class="cyber-btn px-3 py-1 rounded text-xs font-mono-code text-cyan-200 flex items-center gap-1.5 cursor-pointer" title="Upload your exact Passport Portrait PNG">
+                <i class="fa-solid fa-camera text-cyan-400"></i> Load Your Photo
+                <input id="portrait-upload" type="file" accept="image/*" class="hidden" onchange="handlePortraitUpload(event)">
+            </label>
+        </div>
+    </header>
+
+    <main id="hud-stage" class="relative z-20 max-w-[1600px] mx-auto px-4 py-4 lg:py-6 grid grid-cols-1 xl:grid-cols-12 gap-5 items-stretch">
+
+        <!-- ================= LEFT WING: SUMMARY, CORE SKILLS, EXPERIENCE ================= -->
+        <section class="xl:col-span-4 flex flex-col gap-5 wing-left" id="left-wing">
+
+            <!-- 1. SUMMARY PANEL -->
+            <article class="holo-card rounded-xl p-4 sm:p-5">
+                <div class="section-bar justify-between">
+                    <h2 class="font-orbitron text-sm sm:text-base font-bold tracking-wider text-cyan-300 uppercase">
+                        Summary
+                    </h2>
+                    <span class="text-[11px] font-mono-code text-cyan-400/80">2+ YRS EXP // FULL-STACK</span>
+                </div>
+                <p class="text-xs sm:text-[13px] leading-relaxed text-slate-200/95">
+                    Results-driven <strong class="text-cyan-300 font-semibold">Full-Stack Developer</strong> with 2+ years of professional experience building high-performance web applications with <span class="text-cyan-200">Next.js, React, and TypeScript</span> from Figma or a fresh idea to a polished, pixel-perfect web interface, with complex RESTful API integrations via <span class="text-cyan-200">Redux Toolkit and RTK Query</span>.
+                </p>
+                <p class="text-xs sm:text-[13px] leading-relaxed text-slate-300 mt-2">
+                    Hands-on across backend systems and DevOps: <span class="text-cyan-200">Node.js, Express, NestJS, REST/WebSocket APIs, JWT authentication with RBAC, PostgreSQL, MongoDB, Prisma ORM</span>, and Dockerized CI/CD pipelines. Ships end-to-end on Vercel & Cloudflare. Adept with AI tools (<span class="text-cyan-200">Gemini, Claude, Cursor</span>) and solid CS fundamentals (DSA, OOP, unit testing).
+                </p>
+            </article>
+
+            <!-- 2. CORE SKILLS PANEL -->
+            <article class="holo-card rounded-xl p-4 sm:p-5">
+                <div class="section-bar justify-between">
+                    <h2 class="font-orbitron text-sm sm:text-base font-bold tracking-wider text-cyan-300 uppercase">
+                        Core Skills
+                    </h2>
+                    <div class="flex gap-1">
+                        <button onclick="filterSkills('all')" id="tab-all" class="px-2 py-0.5 text-[10px] font-mono-code rounded bg-cyan-400 text-slate-950 font-bold">ALL</button>
+                        <button onclick="filterSkills('frontend')" id="tab-frontend" class="px-2 py-0.5 text-[10px] font-mono-code rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/30">LANGUAGES/FE</button>
+                        <button onclick="filterSkills('backend')" id="tab-backend" class="px-2 py-0.5 text-[10px] font-mono-code rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/30">BACKEND/DB</button>
+                        <button onclick="filterSkills('devops')" id="tab-devops" class="px-2 py-0.5 text-[10px] font-mono-code rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/30">DEVOPS/AI</button>
+                    </div>
+                </div>
+
+                <!-- Visual Icon Highlights (Matching Reference Hologram Cards) -->
+                <div class="grid grid-cols-4 gap-2.5 mb-3.5">
+                    <div onclick="filterSkills('frontend')" class="cursor-pointer rounded-lg p-2.5 bg-slate-900/80 border border-cyan-500/30 hover:border-cyan-400 flex flex-col items-center text-center transition">
+                        <div class="w-8 h-8 rounded bg-blue-600/30 border border-blue-400 flex items-center justify-center font-mono-code font-bold text-xs text-cyan-300 mb-1">TS</div>
+                        <span class="text-[11px] font-semibold text-slate-200">TypeScript</span>
+                        <span class="text-[9px] text-cyan-400 font-mono-code">Next / React</span>
+                    </div>
+                    <div onclick="filterSkills('backend')" class="cursor-pointer rounded-lg p-2.5 bg-slate-900/80 border border-cyan-500/30 hover:border-cyan-400 flex flex-col items-center text-center transition">
+                        <div class="w-8 h-8 rounded bg-emerald-600/30 border border-emerald-400 flex items-center justify-center text-emerald-300 mb-1">
+                            <i class="fa-brands fa-node-js"></i>
+                        </div>
+                        <span class="text-[11px] font-semibold text-slate-200">Backend</span>
+                        <span class="text-[9px] text-cyan-400 font-mono-code">Node / NestJS</span>
+                    </div>
+                    <div onclick="filterSkills('backend')" class="cursor-pointer rounded-lg p-2.5 bg-slate-900/80 border border-cyan-500/30 hover:border-cyan-400 flex flex-col items-center text-center transition">
+                        <div class="w-8 h-8 rounded bg-indigo-600/30 border border-indigo-400 flex items-center justify-center text-indigo-300 mb-1">
+                            <i class="fa-solid fa-database"></i>
+                        </div>
+                        <span class="text-[11px] font-semibold text-slate-200">Database</span>
+                        <span class="text-[9px] text-cyan-400 font-mono-code">PG / MongoDB</span>
+                    </div>
+                    <div onclick="filterSkills('devops')" class="cursor-pointer rounded-lg p-2.5 bg-slate-900/80 border border-cyan-500/30 hover:border-cyan-400 flex flex-col items-center text-center transition">
+                        <div class="w-8 h-8 rounded bg-cyan-600/30 border border-cyan-400 flex items-center justify-center text-cyan-300 mb-1">
+                            <i class="fa-solid fa-screwdriver-wrench"></i>
+                        </div>
+                        <span class="text-[11px] font-semibold text-slate-200">DevOps & AI</span>
+                        <span class="text-[9px] text-cyan-400 font-mono-code">Docker / CI-CD</span>
+                    </div>
+                </div>
+
+                <!-- Dynamic Skill Pills Container -->
+                <div id="skills-container" class="flex flex-wrap gap-1.5"></div>
+            </article>
+
+            <!-- 3. PROFESSIONAL EXPERIENCE PANEL -->
+            <article class="holo-card rounded-xl p-4 sm:p-5 flex-1">
+                <div class="section-bar justify-between">
+                    <h2 class="font-orbitron text-sm sm:text-base font-bold tracking-wider text-cyan-300 uppercase">
+                        Experience
+                    </h2>
+                    <span class="text-[11px] font-mono-code text-emerald-400 bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 rounded">
+                        Feb 2024 – Apr 2026
+                    </span>
+                </div>
+
+                <div class="mb-2">
+                    <div class="flex flex-wrap items-baseline justify-between gap-1">
+                        <h3 class="text-sm sm:text-base font-bold text-white">
+                            Jr. Frontend Developer
+                        </h3>
+                        <span class="text-xs text-cyan-300 font-mono-code">Full-time • On-site</span>
+                    </div>
+                    <p class="text-xs font-semibold text-cyan-400">
+                        HawkEyes Digital Monitoring Ltd. — <span class="text-slate-300 font-normal">Uttara, Dhaka, Bangladesh</span>
+                    </p>
+                </div>
+
+                <ul class="space-y-2 text-xs text-slate-200/95 mt-3">
+                    <li class="flex items-start gap-2">
+                        <span class="text-cyan-400 mt-1">▹</span>
+                        <span>Architected and maintained responsive admin dashboards, inventory tracking systems, and field-work management platforms with real-time status updates and dynamic data handling.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-cyan-400 mt-1">▹</span>
+                        <span>Integrated RESTful APIs and engineered secure <strong class="text-cyan-300">JWT-based authentication</strong> workflows to safeguard system resources and streamline user access controls.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-cyan-400 mt-1">▹</span>
+                        <span>Streamlined complex global application state management and automated server-state caching using <strong class="text-cyan-300">Redux Toolkit and RTK Query</strong> to ensure seamless data synchronization.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-cyan-400 mt-1">▹</span>
+                        <span>Automated continuous deployment pipelines via <strong class="text-cyan-300">Vercel and Git/GitHub CI/CD</strong> workflows, facilitating rapid release cycles and maintaining optimal uptime across production environments.</span>
+                    </li>
+                </ul>
+            </article>
+        </section>
+
+        <!-- ================= CENTER PEDESTAL: AVATAR BUST & BIO CONTACT HUD ================= -->
+        <section class="xl:col-span-4 flex flex-col justify-between items-center center-pedestal relative py-2">
+
+            <!-- Portrait View Switcher (Stylized Suit/Sunglasses Portrait vs Interactive 3D Holo Mesh) -->
+            <div class="flex items-center gap-2 mb-3 z-20">
+                <button onclick="switchAvatarMode('portrait')" id="mode-portrait-btn" class="px-3 py-1 rounded-full text-xs font-mono-code bg-cyan-400 text-slate-950 font-bold shadow-[0_0_12px_#00f3ff] transition">
+                    <i class="fa-solid fa-user-tie mr-1"></i> Executive Portrait
+                </button>
+                <button onclick="switchAvatarMode('mesh3d')" id="mode-mesh-btn" class="px-3 py-1 rounded-full text-xs font-mono-code bg-slate-900/90 text-cyan-300 border border-cyan-500/40 hover:border-cyan-400 transition">
+                    <i class="fa-solid fa-vr-cardboard mr-1"></i> Interactive 3D Bust
+                </button>
+            </div>
+
+            <!-- Center Hologram Avatar Stage -->
+            <div class="relative w-full max-w-[390px] h-[380px] sm:h-[430px] flex items-center justify-center overflow-hidden rounded-2xl border border-cyan-500/30 bg-gradient-to-b from-cyan-950/25 via-slate-950/60 to-cyan-950/40 shadow-[0_0_50px_rgba(0,243,255,0.15)]">
+                <!-- Animated Laser Scanline -->
+                <div class="laser-beam"></div>
+
+                <!-- Circular Sci-Fi Target Rings Behind Portrait -->
+                <div class="absolute w-72 h-72 rounded-full border border-cyan-400/20 animate-[spin_28s_linear_infinite] pointer-events-none"></div>
+                <div class="absolute w-60 h-60 rounded-full border border-dashed border-cyan-300/30 animate-[spin_18s_linear_infinite_reverse] pointer-events-none"></div>
+
+                <!-- MODE 1: High-Precision Vector & Photo Portrait matching attached Passport Portrait (Bald, Beard, Dark Clubmaster Sunglasses, Black Suit & Tie) -->
+                <div id="avatar-portrait-container" class="relative w-full h-full flex items-end justify-center select-none">
+                    <!-- User Uploaded Image Element (Hidden until user uploads their file, or shows SVG twin by default) -->
+                    <img id="uploaded-portrait-img" src="" alt="MD Razikul Islam Joni" class="hidden w-full h-full object-cover object-top filter contrast-105 drop-shadow-[0_0_25px_rgba(0,243,255,0.45)]" />
+
+                    <!-- Custom-Engineered Photorealistic Vector Portrait matching attached Passport Portrait (Bald head, dark sunglasses, full beard, black suit, white shirt, dark textured tie) -->
+                    <svg id="svg-executive-portrait" viewBox="0 0 400 460" class="w-full h-full max-h-[420px] drop-shadow-[0_0_22px_rgba(0,243,255,0.35)]" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <!-- Skin Tone Gradients -->
+                            <radialGradient id="skinHead" cx="50%" cy="38%" r="52%">
+                                <stop offset="0%" stop-color="#f2c29b" />
+                                <stop offset="45%" stop-color="#d99b72" />
+                                <stop offset="85%" stop-color="#b3744c" />
+                                <stop offset="100%" stop-color="#8c5432" />
+                            </radialGradient>
+                            <linearGradient id="skinNeck" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#9e623d" />
+                                <stop offset="45%" stop-color="#c6865e" />
+                                <stop offset="100%" stop-color="#a66a43" />
+                            </linearGradient>
+                            <!-- Sunglasses Lens Gradient -->
+                            <linearGradient id="lensGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#151922" />
+                                <stop offset="50%" stop-color="#090c10" />
+                                <stop offset="100%" stop-color="#1e293b" />
+                            </linearGradient>
+                            <!-- Suit Gradient -->
+                            <linearGradient id="suitGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#1e2229" />
+                                <stop offset="50%" stop-color="#12151a" />
+                                <stop offset="100%" stop-color="#090b0e" />
+                            </linearGradient>
+                            <!-- Tie Pattern -->
+                            <linearGradient id="tieGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#1e293b" />
+                                <stop offset="50%" stop-color="#0f172a" />
+                                <stop offset="100%" stop-color="#090d16" />
+                            </linearGradient>
+                        </defs>
+
+                        <!-- Holographic Rim Backlight -->
+                        <ellipse cx="200" cy="210" rx="135" ry="165" fill="none" stroke="#00f3ff" stroke-width="1.5" stroke-opacity="0.25" stroke-dasharray="6 4" />
+
+                        <!-- Neck -->
+                        <path d="M148 265 L144 335 L256 335 L252 265 Z" fill="url(#skinNeck)" />
+
+                        <!-- Ears -->
+                        <path d="M114 166 C103 166, 100 185, 104 205 C107 220, 114 226, 122 222 Z" fill="#c6865e" stroke="#8c5432" stroke-width="1.5" />
+                        <path d="M286 166 C297 166, 300 185, 296 205 C293 220, 286 226, 278 222 Z" fill="#c6865e" stroke="#8c5432" stroke-width="1.5" />
+
+                        <!-- Bald Cranium & Face Contour -->
+                        <path d="M118 145 C116 72, 152 44, 200 44 C248 44, 284 72, 282 145 C284 192, 276 238, 255 266 C236 290, 218 298, 200 298 C182 298, 164 290, 145 266 C124 238, 116 192, 118 145 Z" fill="url(#skinHead)" />
+
+                        <!-- Forehead Studio Highlight -->
+                        <ellipse cx="195" cy="92" rx="46" ry="26" fill="#ffffff" opacity="0.22" />
+
+                        <!-- Eyebrows -->
+                        <path d="M135 144 Q162 135 186 144" fill="none" stroke="#231c18" stroke-width="5.5" stroke-linecap="round" opacity="0.85" />
+                        <path d="M214 144 Q238 135 265 144" fill="none" stroke="#231c18" stroke-width="5.5" stroke-linecap="round" opacity="0.85" />
+
+                        <!-- Nose Bridge & Nose -->
+                        <path d="M194 155 L187 202 C184 211, 192 216, 200 216 C208 216, 216 211, 213 202 L206 155" fill="#c7855c" opacity="0.65" />
+                        <path d="M183 207 C188 215, 212 215, 217 207" fill="none" stroke="#7d4829" stroke-width="2.2" stroke-linecap="round" />
+
+                        <!-- Full Groomed Beard & Mustache (Matching Portrait) -->
+                        <path d="M120 185
+                                 C122 215, 130 238, 145 252
+                                 C158 263, 172 268, 185 268
+                                 L185 252
+                                 C172 252, 165 242, 165 232
+                                 L235 232
+                                 C235 242, 228 252, 215 252
+                                 L215 268
+                                 C228 268, 242 263, 255 252
+                                 C270 238, 278 215, 280 185
+                                 C280 225, 273 255, 252 276
+                                 C235 294, 218 302, 200 302
+                                 C182 302, 165 294, 148 276
+                                 C127 255, 120 225, 120 185 Z"
+                              fill="#1a1716" opacity="0.94" />
+
+                        <!-- Mustache & Soul Patch -->
+                        <path d="M162 232 C172 220, 188 218, 200 223 C212 218, 228 220, 238 232 C226 236, 212 233, 200 229 C188 233, 174 236, 162 232 Z" fill="#181514" />
+                        <!-- Lips -->
+                        <path d="M174 235 Q200 231 226 235 Q200 247 174 235 Z" fill="#b86b64" />
+                        <path d="M173 235 Q200 236 227 235" fill="none" stroke="#5c2c27" stroke-width="1.5" />
+                        <!-- Soul Patch -->
+                        <path d="M192 245 L208 245 L204 264 L196 264 Z" fill="#181514" />
+
+                        <!-- Iconic Clubmaster Dark Sunglasses (Matching Passport Photo) -->
+                        <!-- Temple Arms -->
+                        <path d="M116 156 L130 154" stroke="#111318" stroke-width="4.5" stroke-linecap="round" />
+                        <path d="M284 156 L270 154" stroke="#111318" stroke-width="4.5" stroke-linecap="round" />
+                        <!-- Metal Nose Bridge -->
+                        <path d="M191 157 Q200 153 209 157" fill="none" stroke="#94a3b8" stroke-width="2.5" />
+                        <!-- Left Frame & Lens -->
+                        <rect x="130" y="148" width="61" height="44" rx="14" fill="url(#lensGrad)" stroke="#111827" stroke-width="3.5" />
+                        <path d="M128 154 Q160 144 192 154" fill="none" stroke="#0f172a" stroke-width="5.5" stroke-linecap="round" />
+                        <!-- Right Frame & Lens -->
+                        <rect x="209" y="148" width="61" height="44" rx="14" fill="url(#lensGrad)" stroke="#111827" stroke-width="3.5" />
+                        <path d="M208 154 Q240 144 272 154" fill="none" stroke="#0f172a" stroke-width="5.5" stroke-linecap="round" />
+                        <!-- Silver Wing Pins -->
+                        <ellipse cx="134" cy="153" rx="3" ry="1.5" fill="#cbd5e1" />
+                        <ellipse cx="266" cy="153" rx="3" ry="1.5" fill="#cbd5e1" />
+                        <!-- Cyber Reflection on Lenses -->
+                        <path d="M140 154 L156 154 L144 184 L134 184 Z" fill="#00f3ff" opacity="0.16" />
+                        <path d="M219 154 L235 154 L223 184 L213 184 Z" fill="#00f3ff" opacity="0.16" />
+
+                        <!-- Crisp White Dress Shirt & Collar -->
+                        <path d="M135 315 L200 445 L265 315 Z" fill="#f8fafc" />
+                        <!-- Shirt Collar Left & Right -->
+                        <polygon points="143,295 198,350 162,372 130,322" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+                        <polygon points="257,295 202,350 238,372 270,322" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+
+                        <!-- Dark Navy/Black Textured Necktie -->
+                        <polygon points="186,346 214,346 209,374 191,374" fill="url(#tieGrad)" />
+                        <polygon points="191,374 209,374 217,460 183,460" fill="url(#tieGrad)" />
+
+                        <!-- Black Executive Suit Jacket & Lapels -->
+                        <path d="M25 365 C45 332, 95 312, 138 298 L185 460 L25 460 Z" fill="url(#suitGrad)" />
+                        <path d="M375 365 C355 332, 305 312, 262 298 L215 460 L375 460 Z" fill="url(#suitGrad)" />
+                        <!-- Suit Notched Lapels -->
+                        <polygon points="138,298 188,460 148,460 112,358 128,348 118,332" fill="#1a1f29" stroke="#2e3646" stroke-width="1" />
+                        <polygon points="262,298 212,460 252,460 288,358 272,348 282,332" fill="#1a1f29" stroke="#2e3646" stroke-width="1" />
+
+                        <!-- Cybernetic Hologram Overlay Grid Lines on Suit -->
+                        <line x1="60" y1="420" x2="340" y2="420" stroke="#00f3ff" stroke-width="0.75" stroke-opacity="0.35" stroke-dasharray="4 6" />
+                        <line x1="90" y1="445" x2="310" y2="445" stroke="#00f3ff" stroke-width="0.75" stroke-opacity="0.35" stroke-dasharray="4 6" />
+                    </svg>
+                </div>
+
+                <!-- MODE 2: Interactive Three.js 3D Hologram Bust Container (Drag to Rotate) -->
+                <div id="avatar-3d-container" class="hidden relative w-full h-full cursor-grab active:cursor-grabbing">
+                    <div id="bust-canvas-mount" class="w-full h-full"></div>
+                    <div class="absolute bottom-3 left-0 right-0 text-center pointer-events-none">
+                        <span class="text-[11px] font-mono-code px-2.5 py-1 rounded-full bg-slate-950/80 border border-cyan-400/40 text-cyan-300">
+                            <i class="fa-solid fa-arrows-rotate mr-1"></i> Drag to Rotate 3D Bust
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Holographic Projector Light Base -->
+            <div class="w-4/5 h-5 holo-projector-glow -mt-2 mb-1 pointer-events-none"></div>
+
+            <!-- CENTER NAMEPLATE & CONTACT HUD -->
+            <div class="holo-card rounded-xl p-4 sm:p-5 w-full text-center border-2 border-cyan-400/60 shadow-[0_0_35px_rgba(0,243,255,0.22)]">
+                <h1 class="font-orbitron text-xl sm:text-2xl lg:text-[26px] font-black tracking-wider text-white glow-text uppercase">
+                    MD RAZIKUL ISLAM JONI
+                </h1>
+                <p class="text-sm sm:text-base font-medium text-cyan-300 tracking-wide mt-0.5">
+                    Jr. Full-Stack Developer
+                </p>
+
+                <!-- Contact Grid Matching Hologram Layout -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left mt-4 pt-3 border-t border-cyan-500/30 text-xs font-mono-code">
+                    <button onclick="copyContact('+880 1623-208660', 'Phone Number')" class="flex items-center gap-2 p-1.5 rounded hover:bg-cyan-500/15 transition text-slate-200 group">
+                        <i class="fa-solid fa-phone text-cyan-400 w-4 text-center"></i>
+                        <span class="truncate">+880 1623-208660</span>
+                        <i class="fa-regular fa-copy ml-auto opacity-0 group-hover:opacity-100 text-cyan-300"></i>
+                    </button>
+
+                    <a href="https://razikuljoni.xyz" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 p-1.5 rounded hover:bg-cyan-500/15 transition text-slate-200 group">
+                        <i class="fa-solid fa-globe text-cyan-400 w-4 text-center"></i>
+                        <span class="truncate">razikuljoni.xyz</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square ml-auto opacity-0 group-hover:opacity-100 text-cyan-300 text-[10px]"></i>
+                    </a>
+
+                    <button onclick="copyContact('razikuljoni@gmail.com', 'Email Address')" class="flex items-center gap-2 p-1.5 rounded hover:bg-cyan-500/15 transition text-slate-200 group">
+                        <i class="fa-solid fa-envelope text-cyan-400 w-4 text-center"></i>
+                        <span class="truncate">razikuljoni@gmail.com</span>
+                        <i class="fa-regular fa-copy ml-auto opacity-0 group-hover:opacity-100 text-cyan-300"></i>
+                    </button>
+
+                    <a href="https://github.com/razikuljoni" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 p-1.5 rounded hover:bg-cyan-500/15 transition text-slate-200 group">
+                        <i class="fa-brands fa-github text-cyan-400 w-4 text-center"></i>
+                        <span class="truncate">github.com/razikuljoni</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square ml-auto opacity-0 group-hover:opacity-100 text-cyan-300 text-[10px]"></i>
+                    </a>
+
+                    <div class="flex items-center gap-2 p-1.5 rounded text-slate-200">
+                        <i class="fa-solid fa-location-dot text-cyan-400 w-4 text-center"></i>
+                        <span class="truncate">Dhaka, Bangladesh</span>
+                    </div>
+
+                    <a href="https://linkedin.com/in/razikuljoni" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 p-1.5 rounded hover:bg-cyan-500/15 transition text-slate-200 group">
+                        <i class="fa-brands fa-linkedin text-cyan-400 w-4 text-center"></i>
+                        <span class="truncate">linkedin.com/in/razikuljoni</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square ml-auto opacity-0 group-hover:opacity-100 text-cyan-300 text-[10px]"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= RIGHT WING: PROJECTS, EDUCATION, TRAINING & CERTIFICATIONS ================= -->
+        <section class="xl:col-span-4 flex flex-col gap-5 wing-right" id="right-wing">
+
+            <!-- 1. PROJECTS PANEL -->
+            <article class="holo-card rounded-xl p-4 sm:p-5">
+                <div class="section-bar justify-between">
+                    <h2 class="font-orbitron text-sm sm:text-base font-bold tracking-wider text-cyan-300 uppercase">
+                        Projects
+                    </h2>
+                    <span class="text-[11px] font-mono-code text-cyan-400/80">CLICK FOR SPECS</span>
+                </div>
+
+                <div class="space-y-3">
+                    <!-- Project 1: SensorGrid -->
+                    <div class="p-3 rounded-lg bg-slate-900/75 border border-cyan-500/30 hover:border-cyan-400 transition group">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <h3 class="text-sm font-bold text-white group-hover:text-cyan-300 transition">
+                                    SensorGrid — Real-Time IoT Dashboard
+                                </h3>
+                                <p class="text-[11px] text-cyan-400/90 font-mono-code">
+                                    Next.js • React • TypeScript • TanStack Query • Zustand • Socket.io
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 mt-2.5">
+                            <button onclick="openProjectModal('sensorgrid')" class="cyber-btn px-3 py-1 rounded text-xs font-medium text-cyan-200 flex items-center gap-1.5">
+                                <i class="fa-solid fa-play text-[10px] text-cyan-400"></i> Live Demo & Specs
+                            </button>
+                            <a href="https://github.com/razikuljoni" target="_blank" rel="noopener noreferrer" class="px-3 py-1 rounded text-xs font-mono-code bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-600 flex items-center gap-1.5 transition">
+                                <i class="fa-solid fa-code text-cyan-400"></i> Source Code
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Project 2: Z Shop -->
+                    <div class="p-3 rounded-lg bg-cyan-950/35 border border-cyan-400/60 shadow-[0_0_15px_rgba(0,243,255,0.12)] hover:border-cyan-300 transition group">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <h3 class="text-sm font-bold text-white group-hover:text-cyan-300 transition">
+                                    Z Shop — AI-Powered E-Commerce Platform
+                                </h3>
+                                <p class="text-[11px] text-cyan-400/90 font-mono-code">
+                                    Next.js • React • TypeScript • Tailwind • Recharts • Zod • Gemini AI
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 mt-2.5">
+                            <button onclick="openProjectModal('zshop')" class="cyber-btn px-3 py-1 rounded text-xs font-medium text-cyan-200 flex items-center gap-1.5">
+                                <i class="fa-solid fa-play text-[10px] text-cyan-400"></i> Live Demo & Specs
+                            </button>
+                            <a href="https://github.com/razikuljoni" target="_blank" rel="noopener noreferrer" class="px-3 py-1 rounded text-xs font-mono-code bg-cyan-400 text-slate-950 font-semibold hover:bg-cyan-300 flex items-center gap-1.5 transition shadow-[0_0_12px_rgba(0,243,255,0.4)]">
+                                <i class="fa-solid fa-code"></i> Source Code
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Project 3: InsightDoc -->
+                    <div class="p-3 rounded-lg bg-slate-900/75 border border-cyan-500/30 hover:border-cyan-400 transition group">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <h3 class="text-sm font-bold text-white group-hover:text-cyan-300 transition">
+                                    InsightDoc — Enterprise RAG Platform for PDF Analytics
+                                </h3>
+                                <p class="text-[11px] text-cyan-400/90 font-mono-code">
+                                    Next.js • TypeScript • Prisma • PostgreSQL • Zustand • shadcn/ui • SSE
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 mt-2.5">
+                            <button onclick="openProjectModal('insightdoc')" class="cyber-btn px-3 py-1 rounded text-xs font-medium text-cyan-200 flex items-center gap-1.5">
+                                <i class="fa-solid fa-play text-[10px] text-cyan-400"></i> Live Demo & Specs
+                            </button>
+                            <a href="https://github.com/razikuljoni" target="_blank" rel="noopener noreferrer" class="px-3 py-1 rounded text-xs font-mono-code bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-600 flex items-center gap-1.5 transition">
+                                <i class="fa-solid fa-code text-cyan-400"></i> Source Code
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- 2. EDUCATION PANEL -->
+            <article class="holo-card rounded-xl p-4 sm:p-5">
+                <div class="section-bar justify-between">
+                    <h2 class="font-orbitron text-sm sm:text-base font-bold tracking-wider text-cyan-300 uppercase">
+                        Education
+                    </h2>
+                    <i class="fa-solid fa-graduation-cap text-cyan-400"></i>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="border-l-2 border-cyan-400 pl-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs sm:text-sm font-bold text-white">BSc in Computer Science & Engineering</h3>
+                            <span class="text-[11px] font-mono-code text-cyan-300">2020 – 2023</span>
+                        </div>
+                        <p class="text-xs text-slate-300">Green University of Bangladesh, Dhaka</p>
+                    </div>
+
+                    <div class="border-l-2 border-cyan-500/50 pl-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs sm:text-sm font-bold text-white">Higher Secondary Certificate (Science)</h3>
+                            <span class="text-[11px] font-mono-code text-cyan-300">2017 – 2018</span>
+                        </div>
+                        <p class="text-xs text-slate-300">Vashantek Govt. College, Dhaka</p>
+                    </div>
+                </div>
+            </article>
+
+            <!-- 3. TRAINING, CERTIFICATIONS & LANGUAGES PANEL -->
+            <article class="holo-card rounded-xl p-4 sm:p-5 flex-1">
+                <div class="section-bar justify-between">
+                    <h2 class="font-orbitron text-sm sm:text-base font-bold tracking-wider text-cyan-300 uppercase">
+                        Training, Certifications & Languages
+                    </h2>
+                    <i class="fa-solid fa-award text-cyan-400"></i>
+                </div>
+
+                <div class="p-3 rounded-lg bg-slate-900/75 border border-cyan-500/25 space-y-2">
+                    <div class="flex items-start gap-2.5">
+                        <div class="w-7 h-7 rounded bg-cyan-500/15 border border-cyan-400/50 flex items-center justify-center shrink-0 mt-0.5 text-cyan-300">
+                            <i class="fa-solid fa-shield-halved text-xs"></i>
+                        </div>
+                        <div class="text-xs space-y-1.5 text-slate-200">
+                            <p>
+                                <strong class="text-cyan-300">Reactive Accelerator</strong> — Advanced React & Modern Frontend Architecture, <em>Learn with Sumit</em> <span class="text-[10px] font-mono-code px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-400/30">In Progress, 2026</span>
+                            </p>
+                            <p>
+                                <strong class="text-cyan-300">Next Level Web Development</strong> — <em>Programming Hero</em> <span class="text-slate-400 font-mono-code">(2023)</span>
+                            </p>
+                            <p>
+                                <strong class="text-cyan-300">Complete Web Development</strong> — <em>Programming Hero</em> <span class="text-slate-400 font-mono-code">(2022)</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 mt-2 border-t border-cyan-500/20 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <span class="font-mono-code text-cyan-400 uppercase text-[11px]">Languages:</span>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-500/30 text-slate-200">
+                                Bengali <span class="text-cyan-400">(Native)</span>
+                            </span>
+                            <span class="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-500/30 text-slate-200">
+                                English <span class="text-cyan-400">(Professional Working)</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+        </section>
+    </main>
+
+    <div id="project-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+        <div class="holo-card rounded-2xl max-w-2xl w-full p-6 border-2 border-cyan-400 shadow-[0_0_50px_rgba(0,243,255,0.3)] animate-[fadeIn_0.2s_ease-out]">
+            <div class="flex items-start justify-between gap-4 border-b border-cyan-500/30 pb-3">
+                <div>
+                    <span id="modal-tag" class="text-[10px] font-mono-code uppercase tracking-widest px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-400/40">
+                        PROJECT ARCHITECTURE
+                    </span>
+                    <h3 id="modal-title" class="font-orbitron text-lg sm:text-xl font-bold text-white mt-1"></h3>
+                </div>
+                <button onclick="closeProjectModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-rose-500/30 border border-cyan-500/40 hover:border-rose-400 text-slate-300 hover:text-rose-200 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div id="modal-bullets" class="space-y-2.5 text-xs sm:text-sm text-slate-200 my-4"></div>
+
+            <div class="p-3 rounded-lg bg-slate-900/90 border border-cyan-500/30">
+                <p class="text-[11px] font-mono-code text-cyan-400 uppercase mb-1.5">Tech Stack & Architecture:</p>
+                <div id="modal-stack" class="flex flex-wrap gap-1.5"></div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-end gap-3 mt-5 pt-3 border-t border-cyan-500/20">
+                <a href="https://razikuljoni.xyz" target="_blank" rel="noopener noreferrer" class="cyber-btn px-4 py-2 rounded-lg text-xs font-mono-code text-cyan-200 flex items-center gap-2">
+                    <i class="fa-solid fa-globe"></i> Visit Portfolio (razikuljoni.xyz)
+                </a>
+                <a href="https://github.com/razikuljoni" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-lg text-xs font-mono-code bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold flex items-center gap-2 transition">
+                    <i class="fa-brands fa-github"></i> View GitHub (@razikuljoni)
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div id="terminal-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+        <div class="holo-card rounded-2xl max-w-2xl w-full overflow-hidden border-2 border-cyan-400 shadow-[0_0_50px_rgba(0,243,255,0.3)]">
+            <div class="bg-slate-900/95 px-4 py-2.5 border-b border-cyan-500/30 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-rose-500"></span>
+                    <span class="w-3 h-3 rounded-full bg-amber-400"></span>
+                    <span class="w-3 h-3 rounded-full bg-emerald-400"></span>
+                    <span class="font-mono-code text-xs text-cyan-300 ml-2">joni@holo-resume:~ (Interactive Shell)</span>
+                </div>
+                <button onclick="closeTerminalModal()" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-4 bg-slate-950/90 font-mono-code text-xs space-y-2 h-72 overflow-y-auto" id="terminal-output">
+                <div class="text-cyan-400">HOLO-OS v3.6 Initialized... Welcome to MD Razikul Islam Joni's Interactive Terminal.</div>
+                <div class="text-slate-400">Type a command below or click a quick-command chip: <span class="text-emerald-400">help</span>, <span class="text-emerald-400">skills</span>, <span class="text-emerald-400">experience</span>, <span class="text-emerald-400">projects</span>, <span class="text-emerald-400">contact</span>, <span class="text-emerald-400">clear</span></div>
+            </div>
+
+            <!-- Quick Command Chips -->
+            <div class="px-4 py-2 bg-slate-900/60 border-t border-cyan-500/20 flex flex-wrap gap-1.5">
+                <button onclick="runTerminalCommand('summary')" class="px-2 py-0.5 text-[11px] font-mono-code rounded bg-cyan-500/15 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30">summary</button>
+                <button onclick="runTerminalCommand('skills')" class="px-2 py-0.5 text-[11px] font-mono-code rounded bg-cyan-500/15 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30">skills</button>
+                <button onclick="runTerminalCommand('experience')" class="px-2 py-0.5 text-[11px] font-mono-code rounded bg-cyan-500/15 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30">experience</button>
+                <button onclick="runTerminalCommand('projects')" class="px-2 py-0.5 text-[11px] font-mono-code rounded bg-cyan-500/15 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30">projects</button>
+                <button onclick="runTerminalCommand('contact')" class="px-2 py-0.5 text-[11px] font-mono-code rounded bg-cyan-500/15 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30">contact</button>
+            </div>
+
+            <form onsubmit="handleTerminalSubmit(event)" class="flex items-center bg-slate-900 px-4 py-2.5 border-t border-cyan-500/30">
+                <span class="font-mono-code text-xs text-emerald-400 mr-2">razikul@joni:~$</span>
+                <input id="terminal-input" type="text" placeholder="Enter command (e.g., skills, projects, contact)..." class="w-full bg-transparent text-xs font-mono-code text-white focus:outline-none" autocomplete="off" />
+            </form>
+        </div>
+    </div>
+
+    <!-- Notification Toast for Clipboard Copies -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 hidden px-4 py-2.5 rounded-xl bg-slate-900/95 border border-cyan-400 text-cyan-200 text-xs font-mono-code shadow-[0_0_20px_rgba(0,243,255,0.4)] flex items-center gap-2">
+        <i class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toast-msg">Copied to clipboard!</span>
+    </div>
+
+    <script>
+        // Complete Skills Data from MD Razikul Islam Joni's Resume
+        const SKILLS_DATA = [
+            // Languages & Frameworks
+            { name: "JavaScript (ES6+)", category: "frontend" },
+            { name: "TypeScript", category: "frontend" },
+            { name: "Next.js", category: "frontend" },
+            { name: "React.js", category: "frontend" },
+            { name: "Redux Toolkit & RTK Query", category: "frontend" },
+            { name: "TanStack Query", category: "frontend" },
+            { name: "Zustand", category: "frontend" },
+            { name: "Tailwind CSS", category: "frontend" },
+            { name: "HTML5 & CSS3", category: "frontend" },
+            // Backend & Database
+            { name: "Node.js", category: "backend" },
+            { name: "Express.js", category: "backend" },
+            { name: "NestJS", category: "backend" },
+            { name: "REST APIs", category: "backend" },
+            { name: "WebSockets / SSE", category: "backend" },
+            { name: "PostgreSQL", category: "backend" },
+            { name: "MongoDB", category: "backend" },
+            { name: "Prisma ORM", category: "backend" },
+            { name: "Schema Design & Indexing", category: "backend" },
+            { name: "Background Jobs & Queues", category: "backend" },
+            { name: "JWT Auth & RBAC", category: "backend" },
+            { name: "Zod Validation", category: "backend" },
+            // DevOps, Tools & AI
+            { name: "Docker", category: "devops" },
+            { name: "Git & GitHub", category: "devops" },
+            { name: "GitHub Actions (CI/CD)", category: "devops" },
+            { name: "Linux (CLI)", category: "devops" },
+            { name: "Vercel & Cloudflare", category: "devops" },
+            { name: "AI Assistants (Gemini, Claude, Cursor)", category: "devops" },
+            { name: "Postman", category: "devops" }
+        ];
+
+        // Detailed Project Information from Resume
+        const PROJECTS_DATA = {
+            sensorgrid: {
+                title: "SensorGrid — Real-Time IoT Dashboard",
+                bullets: [
+                    "Built a real-time IoT monitoring frontend (Next.js, React, TypeScript) rendering live WebSocket telemetry for different devices with responsive, reusable dashboard components.",
+                    "Integrated REST/WebSocket APIs and implemented clean loading, error, and empty states across device-health, alert, and telemetry.",
+                    "Added remote device control and configurable automation-workflow screens, letting users manage device behavior directly from the dashboard."
+                ],
+                stack: ["Next.js", "React", "TypeScript", "TanStack Query", "Zustand", "NextAuth.js", "Socket.io"]
+            },
+            zshop: {
+                title: "Z Shop — AI-Powered E-Commerce Platform",
+                bullets: [
+                    "Built the customer, seller, and admin frontend (Next.js, React, TypeScript) with a searchable catalog, multi-step checkout, and live order tracking, matching UI/UX specs pixel-for-pixel.",
+                    "Integrated REST APIs and Gemini AI for natural-language product search, with Zod-validated forms and Recharts analytics dashboards.",
+                    "Simulated 2FA demo flow and role-scoped views across customer, seller, and admin dashboards to keep sensitive actions properly gated."
+                ],
+                stack: ["Next.js", "React", "TypeScript", "Tailwind CSS", "Recharts", "Zod", "Gemini AI"]
+            },
+            insightdoc: {
+                title: "InsightDoc — Enterprise RAG Platform for PDF Analytics",
+                bullets: [
+                    "Built the full frontend (Next.js, React, TypeScript, Zustand) for a RAG-based PDF analytics platform, including a document dashboard, split-screen citation-grounded chat, and analytics views.",
+                    "Implemented a real-time chat UI with SSE token streaming, page-accurate citation deep-links, and a command palette with keyboard shortcuts, fully responsive from mobile to desktop.",
+                    "Added an analytics view (token/cost tracking, latency metrics) and AI-generated document summaries, with dark/light theme support across the full 320px–4K responsive range."
+                ],
+                stack: ["Next.js", "React", "TypeScript", "Prisma", "PostgreSQL", "Zustand", "shadcn/ui", "REST + SSE"]
+            }
+        };
+
+        // Render Skill Badges
+        function filterSkills(category) {
+            const container = document.getElementById('skills-container');
+            container.innerHTML = '';
+
+            ['all', 'frontend', 'backend', 'devops'].forEach(tab => {
+                const btn = document.getElementById('tab-' + tab);
+                if (tab === category) {
+                    btn.className = "px-2 py-0.5 text-[10px] font-mono-code rounded bg-cyan-400 text-slate-950 font-bold";
+                } else {
+                    btn.className = "px-2 py-0.5 text-[10px] font-mono-code rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/30";
+                }
+            });
+
+            const filtered = category === 'all'
+                ? SKILLS_DATA
+                : SKILLS_DATA.filter(s => s.category === category);
+
+            filtered.forEach(skill => {
+                const span = document.createElement('span');
+                span.className = "skill-badge px-2.5 py-1 rounded text-[11px] font-mono-code text-cyan-100 cursor-default";
+                span.textContent = skill.name;
+                container.appendChild(span);
+            });
+        }
+
+        // Open Project Modal
+        function openProjectModal(projectKey) {
+            const data = PROJECTS_DATA[projectKey];
+            if (!data) return;
+
+            document.getElementById('modal-title').textContent = data.title;
+            const bulletsEl = document.getElementById('modal-bullets');
+            bulletsEl.innerHTML = data.bullets.map(b => `
+                <div class="flex items-start gap-2">
+                    <span class="text-cyan-400 mt-1">▹</span>
+                    <span>${b}</span>
+                </div>
+            `).join('');
+
+            const stackEl = document.getElementById('modal-stack');
+            stackEl.innerHTML = data.stack.map(tech => `
+                <span class="px-2.5 py-1 rounded text-xs font-mono-code bg-cyan-500/15 border border-cyan-400/40 text-cyan-200">${tech}</span>
+            `).join('');
+
+            const modal = document.getElementById('project-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeProjectModal() {
+            const modal = document.getElementById('project-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Upload User's Exact Local Photo (Optional override)
+        function handlePortraitUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.getElementById('uploaded-portrait-img');
+                const svg = document.getElementById('svg-executive-portrait');
+                img.src = e.target.result;
+                img.classList.remove('hidden');
+                svg.classList.add('hidden');
+                switchAvatarMode('portrait');
+                showToast("Custom Portrait Photo Loaded into Hologram!");
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Switch between Executive Suit/Sunglasses Portrait and Interactive 3D Three.js Bust
+        function switchAvatarMode(mode) {
+            const portraitContainer = document.getElementById('avatar-portrait-container');
+            const meshContainer = document.getElementById('avatar-3d-container');
+            const btnPortrait = document.getElementById('mode-portrait-btn');
+            const btnMesh = document.getElementById('mode-mesh-btn');
+
+            if (mode === 'portrait') {
+                portraitContainer.classList.remove('hidden');
+                meshContainer.classList.add('hidden');
+                btnPortrait.className = "px-3 py-1 rounded-full text-xs font-mono-code bg-cyan-400 text-slate-950 font-bold shadow-[0_0_12px_#00f3ff] transition";
+                btnMesh.className = "px-3 py-1 rounded-full text-xs font-mono-code bg-slate-900/90 text-cyan-300 border border-cyan-500/40 hover:border-cyan-400 transition";
+            } else {
+                portraitContainer.classList.add('hidden');
+                meshContainer.classList.remove('hidden');
+                btnMesh.className = "px-3 py-1 rounded-full text-xs font-mono-code bg-cyan-400 text-slate-950 font-bold shadow-[0_0_12px_#00f3ff] transition";
+                btnPortrait.className = "px-3 py-1 rounded-full text-xs font-mono-code bg-slate-900/90 text-cyan-300 border border-cyan-500/40 hover:border-cyan-400 transition";
+                resizeBustRenderer();
+            }
+        }
+
+        // Toggle Flat vs 3D Angled Wings
+        let isFlatMode = false;
+        function toggleFlatMode() {
+            isFlatMode = !isFlatMode;
+            const leftWing = document.getElementById('left-wing');
+            const rightWing = document.getElementById('right-wing');
+            if (isFlatMode) {
+                leftWing.classList.remove('wing-left');
+                rightWing.classList.remove('wing-right');
+                showToast("Switched to Flat 2D Reading Mode");
+            } else {
+                leftWing.classList.add('wing-left');
+                rightWing.classList.add('wing-right');
+                showToast("Switched to 3D Angled Hologram HUD");
+            }
+        }
+
+        // Copy Contact Helper
+        function copyContact(value, label) {
+            const tempInput = document.createElement('textarea');
+            tempInput.value = value;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            showToast(`${label} (${value}) copied!`);
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = message;
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 2800);
+        }
+
+        function openTerminalModal() {
+            const modal = document.getElementById('terminal-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('terminal-input').focus();
+        }
+
+        function closeTerminalModal() {
+            const modal = document.getElementById('terminal-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function handleTerminalSubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('terminal-input');
+            const cmd = input.value.trim().toLowerCase();
+            if (!cmd) return;
+            input.value = '';
+            runTerminalCommand(cmd);
+        }
+
+        function runTerminalCommand(cmd) {
+            const output = document.getElementById('terminal-output');
+            const cmdLine = document.createElement('div');
+            cmdLine.innerHTML = `<span class="text-emerald-400">razikul@joni:~$</span> <span class="text-white">${cmd}</span>`;
+            output.appendChild(cmdLine);
+
+            const resLine = document.createElement('div');
+            resLine.className = "text-cyan-200 pl-3 border-l-2 border-cyan-500/40 my-1";
+
+            switch (cmd) {
+                case 'help':
+                    resLine.innerHTML = `Available commands: <b>summary</b>, <b>skills</b>, <b>experience</b>, <b>projects</b>, <b>education</b>, <b>contact</b>, <b>clear</b>`;
+                    break;
+                case 'summary':
+                    resLine.innerHTML = `MD Razikul Islam Joni — Results-driven Full-Stack Developer (2+ yrs exp) specializing in Next.js, React, TypeScript, Redux Toolkit/RTK Query, Node.js, Express, NestJS, PostgreSQL, MongoDB, Prisma ORM, and Dockerized CI/CD.`;
+                    break;
+                case 'skills':
+                    resLine.innerHTML = `• <b>Frontend:</b> JS (ES6+), TypeScript, Next.js, React, Redux Toolkit, RTK Query, Tailwind CSS<br>• <b>Backend/DB:</b> Node.js, Express, NestJS, PostgreSQL, MongoDB, Prisma, WebSockets/SSE, JWT/RBAC, Zod<br>• <b>DevOps/AI:</b> Docker, GitHub Actions, Linux, Vercel, Cloudflare, Gemini/Claude/Cursor`;
+                    break;
+                case 'experience':
+                    resLine.innerHTML = `<b>Jr. Frontend Developer @ HawkEyes Digital Monitoring Ltd.</b> (Feb 2024 – Apr 2026 | Uttara, Dhaka)<br>Built real-time admin & IoT dashboards, JWT auth, RTK Query caching, and automated Vercel/GitHub CI/CD pipelines.`;
+                    break;
+                case 'projects':
+                    resLine.innerHTML = `1. <b>SensorGrid</b> (Real-Time IoT Dashboard - Next.js, Socket.io, TanStack Query)<br>2. <b>Z Shop</b> (AI E-Commerce Platform - Next.js, Gemini AI, Recharts, Zod)<br>3. <b>InsightDoc</b> (Enterprise RAG PDF Analytics - Next.js, Prisma, PostgreSQL, SSE)`;
+                    break;
+                case 'education':
+                    resLine.innerHTML = `• <b>BSc in CSE</b> — Green University of Bangladesh (2020–2023)<br>• <b>HSC (Science)</b> — Vashantek Govt. College, Dhaka (2017–2018)`;
+                    break;
+                case 'contact':
+                    resLine.innerHTML = `Phone: +880 1623-208660 | Email: razikuljoni@gmail.com | Web: https://razikuljoni.xyz | GitHub: github.com/razikuljoni`;
+                    break;
+                case 'clear':
+                    output.innerHTML = '';
+                    return;
+                default:
+                    resLine.innerHTML = `Command not recognized: "${cmd}". Type <span class="text-emerald-400">help</span> for available commands.`;
+            }
+
+            output.appendChild(resLine);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        let bgScene, bgCamera, bgRenderer, dataParticles, gridHelper;
+        let bustScene, bustCamera, bustRenderer, bustGroup;
+        let mouseX = 0, mouseY = 0;
+        let targetCameraZ = 34;
+
+        function initThreeJSBackground() {
+            const canvas = document.getElementById('bg-canvas');
+            bgScene = new THREE.Scene();
+            bgScene.fog = new THREE.FogExp2(0x020712, 0.018);
+
+            bgCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            bgCamera.position.set(0, 2, targetCameraZ);
+
+            bgRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+            bgRenderer.setSize(window.innerWidth, window.innerHeight);
+            bgRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            // Cyber Floor & Ceiling Grids
+            gridHelper = new THREE.GridHelper(120, 60, 0x00f3ff, 0x003366);
+            gridHelper.position.y = -14;
+            gridHelper.material.transparent = true;
+            gridHelper.material.opacity = 0.35;
+            bgScene.add(gridHelper);
+
+            const topGrid = new THREE.GridHelper(120, 60, 0x00f3ff, 0x002244);
+            topGrid.position.y = 18;
+            topGrid.material.transparent = true;
+            topGrid.material.opacity = 0.18;
+            bgScene.add(topGrid);
+
+            // Matrix Data Stream Pillars (Matching background of reference hologram image)
+            const particleCount = 1400;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 95;
+                positions[i * 3 + 1] = (Math.random() - 0.5) * 55;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 65 - 10;
+
+                // Cyan and Electric Blue palette
+                colors[i * 3] = 0.0;
+                colors[i * 3 + 1] = 0.65 + Math.random() * 0.35;
+                colors[i * 3 + 2] = 1.0;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.32,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.75
+            });
+
+            dataParticles = new THREE.Points(geometry, material);
+            bgScene.add(dataParticles);
+        }
+
+        // Initialize the Interactive 3D Geometric Bust (Bald Cranium, Beard, Sunglasses, Suit & Tie)
+        function initThreeJSBust() {
+            const mount = document.getElementById('bust-canvas-mount');
+            bustScene = new THREE.Scene();
+
+            bustCamera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+            bustCamera.position.set(0, 0.4, 6.2);
+
+            bustRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            bustRenderer.setSize(360, 380);
+            bustRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            mount.appendChild(bustRenderer.domElement);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x88ccff, 0.85);
+            bustScene.add(ambientLight);
+
+            const keyLight = new THREE.DirectionalLight(0xffffff, 1.1);
+            keyLight.position.set(3, 5, 5);
+            bustScene.add(keyLight);
+
+            const rimLight = new THREE.PointLight(0x00f3ff, 1.8, 12);
+            rimLight.position.set(-3, 2, -2);
+            bustScene.add(rimLight);
+
+            bustGroup = new THREE.Group();
+
+            // 1. Bald Head Cranium
+            const skinMat = new THREE.MeshStandardMaterial({
+                color: 0xd4946b,
+                roughness: 0.38,
+                metalness: 0.1
+            });
+            const headGeo = new THREE.SphereGeometry(0.92, 32, 32);
+            headGeo.scale(0.92, 1.14, 0.96);
+            const headMesh = new THREE.Mesh(headGeo, skinMat);
+            headMesh.position.y = 0.75;
+            bustGroup.add(headMesh);
+
+            // 2. Full Groomed Beard
+            const beardMat = new THREE.MeshStandardMaterial({
+                color: 0x161413,
+                roughness: 0.85
+            });
+            const beardGeo = new THREE.SphereGeometry(0.93, 28, 28, 0, Math.PI * 2, Math.PI * 0.52, Math.PI * 0.48);
+            beardGeo.scale(0.93, 1.16, 0.99);
+            const beardMesh = new THREE.Mesh(beardGeo, beardMat);
+            beardMesh.position.y = 0.72;
+            bustGroup.add(beardMesh);
+
+            // 3. Dark Clubmaster Sunglasses
+            const lensMat = new THREE.MeshStandardMaterial({
+                color: 0x090d14,
+                roughness: 0.1,
+                metalness: 0.85
+            });
+            const leftLens = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.32, 0.12), lensMat);
+            leftLens.position.set(-0.34, 0.88, 0.86);
+            bustGroup.add(leftLens);
+
+            const rightLens = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.32, 0.12), lensMat);
+            rightLens.position.set(0.34, 0.88, 0.86);
+            bustGroup.add(rightLens);
+
+            const bridge = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.22), new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.9 }));
+            bridge.rotation.z = Math.PI / 2;
+            bridge.position.set(0, 0.92, 0.9);
+            bustGroup.add(bridge);
+
+            // 4. Neck
+            const neckMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, 0.7, 24), skinMat);
+            neckMesh.position.y = -0.15;
+            bustGroup.add(neckMesh);
+
+            // 5. Black Executive Suit & Shoulders
+            const suitMat = new THREE.MeshStandardMaterial({
+                color: 0x12151c,
+                roughness: 0.5
+            });
+            const torsoGeo = new THREE.CylinderGeometry(1.45, 1.65, 1.4, 28);
+            torsoGeo.scale(1.15, 1, 0.62);
+            const torsoMesh = new THREE.Mesh(torsoGeo, suitMat);
+            torsoMesh.position.y = -1.05;
+            bustGroup.add(torsoMesh);
+
+            // 6. White Shirt V-Zone & Dark Tie
+            const shirtGeo = new THREE.ConeGeometry(0.55, 1.1, 4);
+            const shirtMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
+            const shirtMesh = new THREE.Mesh(shirtGeo, shirtMat);
+            shirtMesh.rotation.z = Math.PI;
+            shirtMesh.rotation.y = Math.PI / 4;
+            shirtMesh.position.set(0, -0.78, 0.65);
+            bustGroup.add(shirtMesh);
+
+            const tieGeo = new THREE.BoxGeometry(0.18, 0.85, 0.08);
+            const tieMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4 });
+            const tieMesh = new THREE.Mesh(tieGeo, tieMat);
+            tieMesh.position.set(0, -0.88, 0.92);
+            bustGroup.add(tieMesh);
+
+            // 7. Holographic Wireframe Aura Cage around Bust
+            const holoWireMat = new THREE.MeshBasicMaterial({
+                color: 0x00f3ff,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.14
+            });
+            const holoSphere = new THREE.Mesh(new THREE.IcosahedronGeometry(1.95, 2), holoWireMat);
+            holoSphere.position.y = -0.1;
+            bustGroup.add(holoSphere);
+
+            bustScene.add(bustGroup);
+
+            // Drag-to-rotate interaction on 3D Bust
+            let isDraggingBust = false;
+            let prevX = 0, prevY = 0;
+
+            mount.addEventListener('mousedown', (e) => {
+                isDraggingBust = true;
+                prevX = e.clientX;
+                prevY = e.clientY;
+            });
+            window.addEventListener('mouseup', () => isDraggingBust = false);
+            window.addEventListener('mousemove', (e) => {
+                if (!isDraggingBust) return;
+                const dx = e.clientX - prevX;
+                const dy = e.clientY - prevY;
+                bustGroup.rotation.y += dx * 0.01;
+                bustGroup.rotation.x = Math.max(-0.4, Math.min(0.4, bustGroup.rotation.x + dy * 0.008));
+                prevX = e.clientX;
+                prevY = e.clientY;
+            });
+        }
+
+        function resizeBustRenderer() {
+            const container = document.getElementById('avatar-3d-container');
+            if (!container || container.classList.contains('hidden')) return;
+            const w = container.clientWidth || 360;
+            const h = container.clientHeight || 380;
+            bustCamera.aspect = w / h;
+            bustCamera.updateProjectionMatrix();
+            bustRenderer.setSize(w, h);
+        }
+
+        function setCameraPreset(preset) {
+            if (preset === 'overview') {
+                targetCameraZ = targetCameraZ === 34 ? 24 : 34;
+                showToast("3D Camera Depth Adjusted");
+            }
+        }
+
+        // Mouse Parallax Tracking
+        document.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+            mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+        });
+
+        // Window Resize Handler
+        window.addEventListener('resize', () => {
+            if (bgCamera && bgRenderer) {
+                bgCamera.aspect = window.innerWidth / window.innerHeight;
+                bgCamera.updateProjectionMatrix();
+                bgRenderer.setSize(window.innerWidth, window.innerHeight);
+            }
+            resizeBustRenderer();
+        });
+
+        // Master Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (dataParticles) {
+                dataParticles.rotation.y += 0.0009;
+                const positions = dataParticles.geometry.attributes.position.array;
+                for (let i = 1; i < positions.length; i += 3) {
+                    positions[i] += 0.035;
+                    if (positions[i] > 28) positions[i] = -28;
+                }
+                dataParticles.geometry.attributes.position.needsUpdate = true;
+            }
+
+            if (bgCamera) {
+                bgCamera.position.x += (mouseX * 3.2 - bgCamera.position.x) * 0.05;
+                bgCamera.position.y += (-mouseY * 2.0 + 2 - bgCamera.position.y) * 0.05;
+                bgCamera.position.z += (targetCameraZ - bgCamera.position.z) * 0.05;
+                bgCamera.lookAt(0, 0, 0);
+            }
+
+            if (bgRenderer && bgScene && bgCamera) {
+                bgRenderer.render(bgScene, bgCamera);
+            }
+
+            if (bustGroup) {
+                bustGroup.rotation.y += 0.004;
+            }
+
+            if (bustRenderer && bustScene && bustCamera) {
+                bustRenderer.render(bustScene, bustCamera);
+            }
+        }
+
+        // Start Everything on Window Load
+        window.onload = function () {
+            filterSkills('all');
+            initThreeJSBackground();
+            initThreeJSBust();
+            animate();
+        };
+    </script>
+</body>
+</html>
